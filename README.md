@@ -1,6 +1,6 @@
 # orbit-sims
 
-Simulate gravity with:
+Simulating gravity with:
 
 $$F_g = G \frac{Mm}{r^2}$$
 
