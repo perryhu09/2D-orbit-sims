@@ -61,6 +61,7 @@ int main(void) {
     int stepsPerFrame = 10;
 
     if(!pause) {
+      // symplectic euler integration
       for (int step = 0; step < stepsPerFrame; step++) {
         dy = starPosition.y - planetPosition.y;
         dx = starPosition.x - planetPosition.x;
