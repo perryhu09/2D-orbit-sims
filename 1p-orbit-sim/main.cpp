@@ -46,6 +46,8 @@ int main(void) {
   int maxTrailLen = 1250;
   int maxStarTrailLen = 1500;
 
+  float dy, dx, dstSq, dst;
+
   bool pause = 0;
   int framecounter = 0;
 
@@ -55,7 +57,45 @@ int main(void) {
 
     if(IsKeyPressed(KEY_SPACE)) pause = !pause;
 
+    float dt = 0.1f;
+    int stepsPerFrame = 10;
+
     if(!pause) {
+      for (int step = 0; step < stepsPerFrame; step++) {
+        dy = starPosition.y - planetPosition.y;
+        dx = starPosition.x - planetPosition.x;
+
+        dstSq = dy * dy + dx * dx;
+        dst = std::sqrt(dstSq);
+
+        potential = -1 * G * planetMass * starMass / dst;
+        energy = potential + kinetic;
+
+        float xdir = dx / dst;
+        float ydir = dy / dst;
+
+        float p_accel = G * starMass / dstSq;
+        float s_accel = G * planetMass / dstSq;
+        
+        planetAcceleration.x = xdir * p_accel;
+        planetAcceleration.y = ydir * p_accel;
+
+        starAcceleration.x = -1 * xdir * s_accel;
+        starAcceleration.y = -1 * ydir * s_accel;
+
+        planetVelocity.x += planetAcceleration.x * dt;
+        planetVelocity.y += planetAcceleration.y * dt;
+
+        starVelocity.x += starAcceleration.x * dt;
+        starVelocity.y += starAcceleration.y * dt;
+
+        planetPosition.x += planetVelocity.x * dt;
+        planetPosition.y += planetVelocity.y * dt;
+
+        starPosition.x += starVelocity.x * dt;
+        starPosition.y += starVelocity.y * dt;
+      }
+
       float pv_mag = std::sqrt(pow(planetVelocity.x, 2) + pow(planetVelocity.y, 2));
       float sv_mag = std::sqrt(pow(starVelocity.x, 2) + pow(starVelocity.y, 2));
       float p_KE = 0.5f * planetMass * pow(pv_mag, 2);
@@ -63,38 +103,8 @@ int main(void) {
 
       kinetic = p_KE + s_KE;
 
-      float dy = starPosition.y - planetPosition.y;
-      float dx = starPosition.x - planetPosition.x;
-
-      float dstSq = dy * dy + dx * dx;
-      float dst = std::sqrt(dstSq);
-
       potential = -1 * G * planetMass * starMass / dst;
       energy = potential + kinetic;
-
-      float xdir = dx / dst;
-      float ydir = dy / dst;
-
-      float p_accel = G * starMass / dstSq;
-      float s_accel = G * planetMass / dstSq;
-      
-      planetAcceleration.x = xdir * p_accel;
-      planetAcceleration.y = ydir * p_accel;
-
-      starAcceleration.x = -1 * xdir * s_accel;
-      starAcceleration.y = -1 * ydir * s_accel;
-
-      planetVelocity.x += planetAcceleration.x;
-      planetVelocity.y += planetAcceleration.y;
-
-      starVelocity.x += starAcceleration.x;
-      starVelocity.y += starAcceleration.y;
-
-      planetPosition.x += planetVelocity.x;
-      planetPosition.y += planetVelocity.y;
-
-      starPosition.x += starVelocity.x;
-      starPosition.y += starVelocity.y;
 
       planetTrail.push_back(planetPosition);
       starTrail.push_back(starPosition);
