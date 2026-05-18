@@ -32,36 +32,25 @@ int main(void) {
   float v1 = std::sqrt(G * starMass / r1);
   float v2 = std::sqrt(G * starMass / r2);
 
-  // star
+  // one star + asteroid belt
   bodies.push_back({
     center,
     {0.0f, 0.0f},
     {0.0f, 0.0f},
-    starMass,
-    35.0f,
+    12000.0f,
+    28.0f,
     YELLOW
   });
-  
-  // planet1, left, downward motion
-  bodies.push_back({
-    {center.x - r1, center.y},
-    {0.0f, v1},
-    {0.0f, 0.0f},
-    10.0f,
-    8.0f,
-    BLUE
-  });
 
-  //planet2, right, upward motion
-  bodies.push_back({
-    {center.x + r2, center.y},
-    {0.0f, -v2},
-    {0.0f, 0.0f},
-    20.0f,
-    11.0f,
-    MAROON
-  });
-  
+  bodies.push_back({{center.x + 100.0f, center.y}, {0.0f, 10.95f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
+  bodies.push_back({{center.x + 92.0f, center.y + 92.0f}, {-6.80f, 6.80f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
+  bodies.push_back({{center.x, center.y + 160.0f}, {-8.66f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
+  bodies.push_back({{center.x - 134.0f, center.y + 134.0f}, {-5.62f, -5.62f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
+  bodies.push_back({{center.x - 220.0f, center.y}, {0.0f, -7.39f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
+  bodies.push_back({{center.x - 177.0f, center.y - 177.0f}, {4.90f, -4.90f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
+  bodies.push_back({{center.x, center.y - 280.0f}, {6.55f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
+  bodies.push_back({{center.x + 219.0f, center.y - 219.0f}, {4.40f, 4.40f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
+  bodies.push_back({{center.x + 310.0f, center.y}, {0.0f, 6.22f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY}); 
   std::vector<std::vector<Vector2>> trails(bodies.size());
   int maxTrailLen = 100;
   
