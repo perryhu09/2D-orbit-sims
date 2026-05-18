@@ -47,7 +47,7 @@ int main(void) {
     {center.x - r1, center.y},
     {0.0f, v1},
     {0.0f, 0.0f},
-    2000.0f,
+    10.0f,
     8.0f,
     BLUE
   });
@@ -57,7 +57,7 @@ int main(void) {
     {center.x + r2, center.y},
     {0.0f, -v2},
     {0.0f, 0.0f},
-    5000.0f,
+    20.0f,
     11.0f,
     MAROON
   });
@@ -134,12 +134,15 @@ int main(void) {
       }
 
       for (int i = 0; i < bodies.size(); i++) {
-        DrawCircleV(bodies[i].position, bodies[i].radius, bodies[i].color);
+        Color color = bodies[i].color;
         for (int j = 1; j < trails[i].size(); j++) {
           float t = (float)j / trails[i].size();
-          Color trailColor = {80, 160, 255, (unsigned char)(t * 255)};
-          DrawLineEx(trails[i][j - 1], trails[i][j], 2.0f, trailColor);
+          color.a = (unsigned char)(t * 180);
+          DrawLineEx(trails[i][j - 1], trails[i][j], 2.0f, color);
         }
+        color.a = 45;
+        DrawCircleV(bodies[i].position, bodies[i].radius * 1.5f, color);
+        DrawCircleV(bodies[i].position, bodies[i].radius, bodies[i].color);
       }
 
       DrawFPS(10, 10);
