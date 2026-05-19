@@ -1,0 +1,380 @@
+#include "raylib.h"
+#include <vector>
+#include <cmath>
+
+struct Body {
+  Vector2 position;
+  Vector2 velocity;
+  Vector2 acceleration;
+  float mass;
+  float radius;
+  Color color; 
+};
+
+int screenWidth = 1500;
+int screenHeight = 1000;
+
+Vector2 center = {screenWidth / 2.0f, screenHeight / 2.0f};
+
+std::vector<Body> bodies;
+std::vector<std::vector<Vector2>> trails;
+
+// monoplanteary system preset
+std::vector<Body> preset1 = {
+  {
+    center,
+    {0.0f, -0.4472136f},
+    {0.0f, 0.0f},
+    2000.0f,
+    50.0f,
+    YELLOW
+  },
+  {
+    {center.x - 400.0f, center.y},
+    {0.0f, 2.2360679f},
+    {0.0f, 0.0f},
+    400.0f,
+    10.0f,
+    BLUE
+  }
+};
+
+// asteroid belt system
+std::vector<Body> preset2 = {
+  {
+    center,
+    {0.0f, 0.0f},
+    {0.0f, 0.0f},
+    12000.0f,
+    28.0f,
+    YELLOW
+  },
+  {{center.x + 100.0f, center.y}, {0.0f, 10.95f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY},
+  {{center.x + 92.0f, center.y + 92.0f}, {-6.80f, 6.80f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY},
+  {{center.x, center.y + 160.0f}, {-8.66f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY},
+  {{center.x - 134.0f, center.y + 134.0f}, {-5.62f, -5.62f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY},
+  {{center.x - 220.0f, center.y}, {0.0f, -7.39f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY},
+  {{center.x - 177.0f, center.y - 177.0f}, {4.90f, -4.90f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY},
+  {{center.x, center.y - 280.0f}, {6.55f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY},
+  {{center.x + 219.0f, center.y - 219.0f}, {4.40f, 4.40f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY},
+  {{center.x + 310.0f, center.y}, {0.0f, 6.22f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY}
+};
+
+// 3 body triangle
+float R = 180.0f;
+float v = 4.004f;
+std::vector<Body> preset3 = {
+  {
+    {center.x + R, center.y},
+    {0.0f, v},
+    {0.0f, 0.0f},
+    5000.0f,
+    18.0f,
+    RED
+  },
+  {
+    {center.x - 0.5f * R, center.y + 0.8660254f * R},
+    {-0.8660254f * v, -0.5f * v},
+    {0.0f, 0.0f},
+    5000.0f,
+    18.0f,
+    GREEN
+  },
+  {
+    {center.x - 0.5f * R, center.y - 0.8660254f * R},
+    {0.8660254f * v, -0.5f * v},
+    {0.0f, 0.0f},
+    5000.0f,
+    18.0f,
+    BLUE
+  }
+};
+
+// binary star system + 1 planet
+std::vector<Body> preset4 = {
+  {
+    {center.x - 70.0f, center.y},
+    {0.0f, -5.979f},
+    {0.0f, 0.0f},
+    10000.0f,
+    22.0f,
+    YELLOW
+  },
+  {
+    {center.x + 70.0f, center.y},
+    {0.0f, 5.975f},
+    {0.0f, 0.0f},
+    10000.0f,
+    22.0f,
+    ORANGE
+  },
+  {
+    {center.x + 380.0f, center.y},
+    {0.0f, 7.25f},
+    {0.0f, 0.0f},
+    5.0f,
+    7.0f,
+    SKYBLUE
+  }
+};
+
+void loadPreset(int n) {
+  trails.clear();
+  if(n == 1) {
+    bodies = preset1;
+  } else if(n == 2) {
+    bodies = preset2;
+  } else if(n == 3) {
+    bodies = preset3;
+  } else if(n == 4) {
+    bodies = preset4;
+  }
+  trails.resize(bodies.size());
+}
+
+float calculateEnergy(const std::vector<Body> bodies, const float G) {
+  float kinetic = 0.0f;
+  float potential = 0.0f;
+
+  for (int i = 0; i < bodies.size(); i++) {
+    float v_mag = std::sqrt(pow(bodies[i].velocity.x, 2) + pow(bodies[i].velocity.y, 2));
+    kinetic += 0.5f * bodies[i].mass * pow(v_mag, 2);
+  }
+
+  for (int i = 0; i < bodies.size(); i++) {
+    for (int j = i + 1; j < bodies.size(); j++) {
+      float dx = bodies[j].position.x - bodies[i].position.x;
+      float dy = bodies[j].position.y - bodies[i].position.y;
+      float dist = std::sqrt(dx * dx + dy * dy);
+      potential += -G * bodies[i].mass * bodies[j].mass / dist;
+    }
+  }
+  return kinetic + potential;
+}
+
+int main(void) {
+
+  int gridSpacing = 50;
+
+  float G = 1.0f;
+
+  float energy;
+ 
+  int maxTrailLen = 100;
+
+  int currentPreset = 1;
+
+  bool pause = 0;
+
+  float initialEnergy, energyDrift;
+  bool initialEnergySet = false;
+
+  int framesCounter = 0;
+
+  InitWindow(screenWidth, screenHeight, "N-Body Simple Solar System Sim");
+
+  loadPreset(currentPreset);
+
+  SetTargetFPS(60);
+
+  int stepsPerFrame = 10;
+  float dt = 1.0f / (float)stepsPerFrame;
+  const int minStepsPerFrame = 1;
+  const int maxStepsPerFrame = 500;
+
+  while (!WindowShouldClose()) {
+    if(IsKeyPressed(KEY_SPACE)) pause = !pause;
+
+    if(IsKeyPressed(KEY_ONE)) {
+      loadPreset(1);
+      currentPreset = 1;
+      initialEnergySet = false;
+    }
+    if(IsKeyPressed(KEY_TWO)) {
+      loadPreset(2);
+      currentPreset = 2;
+      initialEnergySet = false;
+    }
+    if(IsKeyPressed(KEY_THREE)) {
+      loadPreset(3);
+      currentPreset = 3;
+      initialEnergySet = false;
+    }
+    if(IsKeyPressed(KEY_FOUR)) {
+      loadPreset(4); 
+      currentPreset = 4;
+      initialEnergySet = false;
+    }
+
+    if(IsKeyPressed(KEY_R)) {
+      loadPreset(currentPreset);
+      stepsPerFrame = 10;
+      dt = 0.1f;
+      initialEnergySet = false;
+    }
+
+    if (IsKeyPressed(KEY_UP)) {
+      stepsPerFrame++;
+      if (stepsPerFrame > maxStepsPerFrame) stepsPerFrame = maxStepsPerFrame;
+      dt = 1.0f / (float)stepsPerFrame;
+    }
+
+    if (IsKeyPressed(KEY_DOWN)) {
+      stepsPerFrame--;
+      if (stepsPerFrame < minStepsPerFrame) stepsPerFrame = minStepsPerFrame;
+      dt = 1.0f / (float)stepsPerFrame;
+    }
+
+    if (!pause) {
+      for (int step = 0; step < stepsPerFrame; step++) {
+        for (Body& body : bodies) {
+          body.acceleration = {0, 0};
+        }
+
+        for (int i = 0; i < bodies.size(); i++) {
+          for (int j = i + 1; j < bodies.size(); ) {
+
+            float dx = bodies[j].position.x - bodies[i].position.x;
+            float dy = bodies[j].position.y - bodies[i].position.y;
+
+            float r1 = bodies[i].radius;
+            float r2 = bodies[j].radius;
+
+            float distSq = dx * dx + dy * dy;
+            float dist = std::sqrt(distSq);
+
+            if (dist <= r1 + r2) {
+              float m1 = bodies[i].mass;
+              float m2 = bodies[j].mass;
+
+              Vector2 p1 = bodies[i].position;
+              Vector2 p2 = bodies[j].position;
+
+              Vector2 v1 = bodies[i].velocity;
+              Vector2 v2 = bodies[j].velocity;
+
+              bodies[i].position = {
+                (m1 * p1.x + m2 * p2.x) / (m1 + m2),
+                (m1 * p1.y + m2 * p2.y) / (m1 + m2)
+              };
+
+              bodies[i].velocity= {
+                (m1 * v1.x + m2 * v2.x) / (m1 + m2),
+                (m1 * v1.y + m2 * v2.y) / (m1 + m2)
+              };
+              
+              bodies[i].mass = m1 + m2;
+              bodies[i].radius = std::sqrt(r1 * r1 + r2 * r2);
+
+              bodies.erase(bodies.begin() + j);
+              trails.erase(trails.begin() + j);
+
+              trails[i].clear();
+
+              continue;
+            }
+
+            Vector2 dir;
+            dir.x = dx / dist;
+            dir.y = dy / dist;
+
+            float a_i = G * bodies[j].mass / distSq;
+            float a_j = G * bodies[i].mass / distSq;
+
+            bodies[i].acceleration.x += a_i * dir.x;
+            bodies[i].acceleration.y += a_i * dir.y;
+
+            bodies[j].acceleration.x -= a_j * dir.x;
+            bodies[j].acceleration.y -= a_j * dir.y;
+
+            j++;
+          }
+        }
+
+        for (int i = 0; i < bodies.size(); i++) {
+          bodies[i].velocity.x += bodies[i].acceleration.x * dt;
+          bodies[i].velocity.y += bodies[i].acceleration.y * dt;
+
+          bodies[i].position.x += bodies[i].velocity.x * dt;
+          bodies[i].position.y += bodies[i].velocity.y * dt;
+        }
+      }
+
+      for (int i = 0; i < bodies.size(); i++) {
+        trails[i].push_back(bodies[i].position);
+
+        if (trails[i].size() > maxTrailLen) {
+          trails[i].erase(trails[i].begin());
+        }
+      }
+    } else {
+      framesCounter++;
+    }
+
+    energy = calculateEnergy(bodies, G);
+
+    if(!initialEnergySet) {
+      initialEnergy = energy;
+      initialEnergySet = true;
+    }
+
+    energyDrift = 100.0f * (energy - initialEnergy) / std::abs(initialEnergy);
+
+    BeginDrawing();
+      ClearBackground(BLACK);
+
+      Color gridColor = {20, 20, 25, 255};
+      for (int x = 0; x < GetScreenWidth(); x += gridSpacing) {
+        DrawLine(x, 0, x, GetScreenHeight(), gridColor);
+      }
+
+      for (int y = 0; y < GetScreenHeight(); y += gridSpacing) {
+        DrawLine(0, y, GetScreenWidth(), y, gridColor);
+      }
+
+      for (int i = 0; i < bodies.size(); i++) {
+        Color color = bodies[i].color;
+        for (int j = 1; j < trails[i].size(); j++) {
+          float t = (float)j / trails[i].size();
+          color.a = (unsigned char)(t * 180);
+          DrawLineEx(trails[i][j - 1], trails[i][j], 2.0f, color);
+        }
+        color.a = 45;
+        DrawCircleV(bodies[i].position, bodies[i].radius * 1.5f, color);
+        DrawCircleV(bodies[i].position, bodies[i].radius, bodies[i].color);
+      }
+
+      DrawText("Press SPACE to pause simulation", 10, GetScreenHeight() - 23, 20, RAYWHITE);
+
+      int textWidth = MeasureText("PAUSED", 30);
+      if(pause && ((framesCounter/30) % 2)) DrawText("PAUSED", GetScreenWidth()/2 - textWidth/2, GetScreenHeight()/2 - 15, 30, GRAY);
+
+      DrawFPS(10, 10);
+
+      DrawText(TextFormat("Energy: %.2f J", energy), 10, 30, 20, WHITE);
+      DrawText(TextFormat("Energy drift: %.4f%%", energyDrift), 10, 52, 20, WHITE);
+
+      int uiX = 10;
+      int uiY = 80;
+      int fontSize = 14;
+      int lineGap = 18;
+
+      DrawText("Presets", uiX, uiY, fontSize, RAYWHITE);
+      DrawText("1 - Monoplanetary system", uiX, uiY + lineGap * 1, fontSize, GRAY);
+      DrawText("2 - Asteroid belt", uiX, uiY + lineGap * 2, fontSize, GRAY);
+      DrawText("3 - 3 body triangle", uiX, uiY + lineGap * 3, fontSize, GRAY);
+      DrawText("4 - Binary star system", uiX, uiY + lineGap * 4, fontSize, GRAY);
+
+      int controlsY = uiY + lineGap * 6;
+
+      DrawText("Controls", uiX, controlsY, fontSize, RAYWHITE);
+      DrawText("R - Reset simulation", uiX, controlsY + lineGap * 1, fontSize, GRAY);
+      DrawText(TextFormat("UP/DOWN - Steps per frame: %d", stepsPerFrame), uiX, controlsY + lineGap * 2, fontSize, GRAY);
+
+    EndDrawing();
+  }
+    
+  CloseWindow();
+
+  return 0;
+}
