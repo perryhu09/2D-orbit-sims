@@ -1,4 +1,5 @@
-orbit
-bounce
+*
+!*/
+!*.*
 !*.cpp
 .vscode/
