@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 struct Body {
   Vector2 position;
@@ -152,6 +153,16 @@ float calculateEnergy(const std::vector<Body> bodies, const float G) {
   return kinetic + potential;
 }
 
+void resetCamera(Camera2D& camera, Vector2 center) {
+  camera.target = center;
+  camera.offset = {
+    GetScreenWidth() / 2.0f,
+    GetScreenHeight() / 2.0f
+  };
+  camera.rotation = 0.0f;
+  camera.zoom = 1.0f;
+}
+
 int main(void) {
 
   int gridSpacing = 50;
@@ -172,6 +183,9 @@ int main(void) {
   int framesCounter = 0;
 
   InitWindow(screenWidth, screenHeight, "N-Body Simple Solar System Sim");
+
+  Camera2D camera = {0};
+  resetCamera(camera, center);
 
   loadPreset(currentPreset);
 
@@ -211,6 +225,7 @@ int main(void) {
       stepsPerFrame = 10;
       dt = 0.1f;
       initialEnergySet = false;
+      resetCamera(camera, center);
     }
 
     if (IsKeyPressed(KEY_UP)) {
@@ -223,6 +238,42 @@ int main(void) {
       stepsPerFrame--;
       if (stepsPerFrame < minStepsPerFrame) stepsPerFrame = minStepsPerFrame;
       dt = 1.0f / (float)stepsPerFrame;
+    }
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+      Vector2 mouseDelta = GetMouseDelta();
+
+      camera.target.x -= mouseDelta.x / camera.zoom;
+      camera.target.y -= mouseDelta.y / camera.zoom;
+    }
+
+    float cameraSpeed = 500.0f * GetFrameTime() / camera.zoom;
+
+    if (IsKeyDown(KEY_A)) camera.target.x -= cameraSpeed;
+    if (IsKeyDown(KEY_D)) camera.target.x += cameraSpeed;
+    if (IsKeyDown(KEY_W)) camera.target.y -= cameraSpeed;
+    if (IsKeyDown(KEY_S)) camera.target.y += cameraSpeed;
+
+    float wheel = GetMouseWheelMove();
+
+    if (wheel != 0.0f) {
+      Vector2 mousePos = GetMousePosition();
+      Vector2 mouseWorldBefore = GetScreenToWorld2D(mousePos, camera);
+
+      float sensitivity = 0.03f;
+      float factor = 1.0f + sensitivity;
+
+      if (wheel > 0.0f) {
+        camera.zoom *= std::pow(factor, wheel);
+      } else {
+        camera.zoom /= std::pow(factor, -wheel);
+      }
+
+      camera.zoom = std::clamp(camera.zoom, 0.1f, 10.0f);
+
+      Vector2 mouseWorldAfter = GetScreenToWorld2D(mousePos, camera);
+
+      camera.target.x += mouseWorldBefore.x - mouseWorldAfter.x;
+      camera.target.y += mouseWorldBefore.y - mouseWorldAfter.y;
     }
 
     if (!pause) {
@@ -323,31 +374,32 @@ int main(void) {
     BeginDrawing();
       ClearBackground(BLACK);
 
-      Color gridColor = {20, 20, 25, 255};
-      for (int x = 0; x < GetScreenWidth(); x += gridSpacing) {
-        DrawLine(x, 0, x, GetScreenHeight(), gridColor);
-      }
-
-      for (int y = 0; y < GetScreenHeight(); y += gridSpacing) {
-        DrawLine(0, y, GetScreenWidth(), y, gridColor);
-      }
-
-      for (int i = 0; i < bodies.size(); i++) {
-        Color color = bodies[i].color;
-        for (int j = 1; j < trails[i].size(); j++) {
-          float t = (float)j / trails[i].size();
-          color.a = (unsigned char)(t * 180);
-          DrawLineEx(trails[i][j - 1], trails[i][j], 2.0f, color);
+      BeginMode2D(camera);
+        Color gridColor = {20, 20, 25, 255};
+        for (int x = -5000; x < 5000; x += gridSpacing) {
+          DrawLine(x, 0, x, GetScreenHeight(), gridColor);
         }
-        color.a = 45;
-        DrawCircleV(bodies[i].position, bodies[i].radius * 1.5f, color);
-        DrawCircleV(bodies[i].position, bodies[i].radius, bodies[i].color);
-      }
 
-      DrawText("Press SPACE to pause simulation", 10, GetScreenHeight() - 23, 20, RAYWHITE);
+        for (int y = -5000; y < 5000; y += gridSpacing) {
+          DrawLine(0, y, GetScreenWidth(), y, gridColor);
+        }
+
+        for (int i = 0; i < bodies.size(); i++) {
+          Color color = bodies[i].color;
+          for (int j = 1; j < trails[i].size(); j++) {
+            float t = (float)j / trails[i].size();
+            color.a = (unsigned char)(t * 180);
+            DrawLineEx(trails[i][j - 1], trails[i][j], 2.0f / camera.zoom, color);
+          }
+          color.a = 45;
+          DrawCircleV(bodies[i].position, bodies[i].radius * 1.5f, color);
+          DrawCircleV(bodies[i].position, bodies[i].radius, bodies[i].color);
+        }
+      EndMode2D();
 
       int textWidth = MeasureText("PAUSED", 30);
       if(pause && ((framesCounter/30) % 2)) DrawText("PAUSED", GetScreenWidth()/2 - textWidth/2, GetScreenHeight()/2 - 15, 30, GRAY);
+      DrawText("Press SPACE to pause simulation", 10, GetScreenHeight() - 23, 20, RAYWHITE);
 
       DrawFPS(10, 10);
 
@@ -370,7 +422,7 @@ int main(void) {
       DrawText("Controls", uiX, controlsY, fontSize, RAYWHITE);
       DrawText("R - Reset simulation", uiX, controlsY + lineGap * 1, fontSize, GRAY);
       DrawText(TextFormat("UP/DOWN - Steps per frame: %d", stepsPerFrame), uiX, controlsY + lineGap * 2, fontSize, GRAY);
-
+    
     EndDrawing();
   }
     
