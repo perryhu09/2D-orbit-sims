@@ -8,52 +8,61 @@ struct Body {
   Vector2 acceleration;
   float mass;
   float radius;
-  Color color;
+  Color color; 
 };
 
 int main(void) {
-
-  const int screenWidth = 1500;
-  const int screenHeight = 1000;
+  int screenWidth = 1500;
+  int screenHeight = 1000;
 
   int gridSpacing = 50;
 
   std::vector<Body> bodies;
 
-  Vector2 center = {screenWidth / 2.0f, screenHeight / 2.0f};
-
+  Vector2 center = {screenWidth / 2.0f, screenHeight / 2.0f };
   float G = 1.0f;
 
-  // one star + asteroid belt
+ 
+  // 3-body rotating triangle
+  float R = 180.0f;
+  float v = 4.004f;
+
   bodies.push_back({
-    center,
+    {center.x + R, center.y},
+    {0.0f, v},
     {0.0f, 0.0f},
-    {0.0f, 0.0f},
-    12000.0f,
-    28.0f,
-    YELLOW
+    5000.0f,
+    18.0f,
+    RED
   });
 
-  bodies.push_back({{center.x + 100.0f, center.y}, {0.0f, 10.95f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
-  bodies.push_back({{center.x + 92.0f, center.y + 92.0f}, {-6.80f, 6.80f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
-  bodies.push_back({{center.x, center.y + 160.0f}, {-8.66f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
-  bodies.push_back({{center.x - 134.0f, center.y + 134.0f}, {-5.62f, -5.62f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
-  bodies.push_back({{center.x - 220.0f, center.y}, {0.0f, -7.39f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
-  bodies.push_back({{center.x - 177.0f, center.y - 177.0f}, {4.90f, -4.90f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
-  bodies.push_back({{center.x, center.y - 280.0f}, {6.55f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
-  bodies.push_back({{center.x + 219.0f, center.y - 219.0f}, {4.40f, 4.40f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
-  bodies.push_back({{center.x + 310.0f, center.y}, {0.0f, 6.22f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY}); 
+  bodies.push_back({
+    {center.x - 0.5f * R, center.y + 0.8660254f * R},
+    {-0.8660254f * v, -0.5f * v},
+    {0.0f, 0.0f},
+    5000.0f,
+    18.0f,
+    GREEN
+  });
+
+  bodies.push_back({
+    {center.x - 0.5f * R, center.y - 0.8660254f * R},
+    {0.8660254f * v, -0.5f * v},
+    {0.0f, 0.0f},
+    5000.0f,
+    18.0f,
+    BLUE
+  });
 
   std::vector<std::vector<Vector2>> trails(bodies.size());
   int maxTrailLen = 100;
-  
-  InitWindow(screenWidth, screenHeight, "N-Body Asteroid Belt Orbit Sim");
+
+  InitWindow(screenWidth, screenHeight, "N-Body Simple Solar System Sim");
 
   SetTargetFPS(60);
 
   while (!WindowShouldClose()) {
 
-    // symplectic euler integration
     float dt = 0.1f;
     int stepsPerFrame = 10;
 
@@ -65,8 +74,8 @@ int main(void) {
       for (int i = 0; i < bodies.size(); i++) {
         for (int j = i + 1; j < bodies.size(); ) {
 
-          float dx = bodies[j].position.x - bodies[i].position.x; 
-          float dy = bodies[j].position.y - bodies[i].position.y; 
+          float dx = bodies[j].position.x - bodies[i].position.x;
+          float dy = bodies[j].position.y - bodies[i].position.y;
 
           float r1 = bodies[i].radius;
           float r2 = bodies[j].radius;
@@ -76,7 +85,7 @@ int main(void) {
 
           if (dist <= r1 + r2) {
             float m1 = bodies[i].mass;
-            float m2 = bodies[j].mass; 
+            float m2 = bodies[j].mass;
 
             Vector2 p1 = bodies[i].position;
             Vector2 p2 = bodies[j].position;
@@ -84,18 +93,17 @@ int main(void) {
             Vector2 v1 = bodies[i].velocity;
             Vector2 v2 = bodies[j].velocity;
 
-            bodies[i].position= {
+            bodies[i].position = {
               (m1 * p1.x + m2 * p2.x) / (m1 + m2),
               (m1 * p1.y + m2 * p2.y) / (m1 + m2)
             };
 
-            bodies[i].velocity = {
+            bodies[i].velocity= {
               (m1 * v1.x + m2 * v2.x) / (m1 + m2),
               (m1 * v1.y + m2 * v2.y) / (m1 + m2)
             };
-
+            
             bodies[i].mass = m1 + m2;
-
             bodies[i].radius = std::sqrt(r1 * r1 + r2 * r2);
 
             bodies.erase(bodies.begin() + j);
@@ -118,7 +126,7 @@ int main(void) {
 
           bodies[j].acceleration.x -= a_j * dir.x;
           bodies[j].acceleration.y -= a_j * dir.y;
-          
+
           j++;
         }
       }
@@ -141,7 +149,6 @@ int main(void) {
     }
 
     BeginDrawing();
-
       ClearBackground(BLACK);
 
       Color gridColor = {20, 20, 25, 255};
@@ -169,7 +176,7 @@ int main(void) {
 
     EndDrawing();
   }
-  
+    
   CloseWindow();
 
   return 0;
