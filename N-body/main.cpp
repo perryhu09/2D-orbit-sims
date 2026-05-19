@@ -24,14 +24,6 @@ int main(void) {
 
   float G = 1.0f;
 
-  float starMass = 10000.0f;
-
-  float r1 = 250.0f;
-  float r2 = 450.0f;
-
-  float v1 = std::sqrt(G * starMass / r1);
-  float v2 = std::sqrt(G * starMass / r2);
-
   // one star + asteroid belt
   bodies.push_back({
     center,
@@ -51,6 +43,7 @@ int main(void) {
   bodies.push_back({{center.x, center.y - 280.0f}, {6.55f, 0.0f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY});
   bodies.push_back({{center.x + 219.0f, center.y - 219.0f}, {4.40f, 4.40f}, {0.0f, 0.0f}, 1.0f, 3.0f, LIGHTGRAY});
   bodies.push_back({{center.x + 310.0f, center.y}, {0.0f, 6.22f}, {0.0f, 0.0f}, 1.0f, 3.0f, GRAY}); 
+
   std::vector<std::vector<Vector2>> trails(bodies.size());
   int maxTrailLen = 100;
   
@@ -72,22 +65,61 @@ int main(void) {
       }
 
       for (int i = 0; i < bodies.size(); i++) {
-        for (int j = 0; j < bodies.size(); j++) {
-          if (i == j) continue;
+        for (int j = i + 1; j < bodies.size(); j++) {
+
           float dx = bodies[j].position.x - bodies[i].position.x; 
           float dy = bodies[j].position.y - bodies[i].position.y; 
 
+          float r1 = bodies[i].radius;
+          float r2 = bodies[j].radius;
+
           float distSq = dx * dx + dy * dy;
           float dist = std::sqrt(distSq);
+
+          if (dist <= r1 + r2) {
+            float m1 = bodies[i].mass;
+            float m2 = bodies[j].mass; 
+
+            Vector2 p1 = bodies[i].position;
+            Vector2 p2 = bodies[j].position;
+
+            Vector2 v1 = bodies[i].velocity;
+            Vector2 v2 = bodies[j].velocity;
+
+            bodies[i].position= {
+              (m1 * p1.x + m2 * p2.x) / (m1 + m2),
+              (m1 * p1.y + m2 * p2.y) / (m1 + m2)
+            };
+
+            bodies[i].velocity = {
+              (m1 * v1.x + m2 * v2.x) / (m1 + m2),
+              (m1 * v1.y + m2 * v2.y) / (m1 + m2)
+            };
+
+            bodies[i].mass = m1 + m2;
+
+            bodies[i].radius = std::sqrt(r1 * r1 + r2 * r2);
+
+            bodies.erase(bodies.begin() + j);
+            trails.erase(trails.begin() + j);
+
+            trails[i].clear();
+
+            continue;
+          }
 
           Vector2 dir;
           dir.x = dx / dist;
           dir.y = dy / dist;
 
-          float a = G * bodies[j].mass / distSq;
+          float a_i = G * bodies[j].mass / distSq;
+          float a_j = G * bodies[i].mass / distSq;
 
-          bodies[i].acceleration.x += a * dir.x;
-          bodies[i].acceleration.y += a * dir.y;
+          bodies[i].acceleration.x += a_i * dir.x;
+          bodies[i].acceleration.y += a_i * dir.y;
+
+          bodies[j].acceleration.x -= a_j * dir.x;
+          bodies[j].acceleration.y -= a_j * dir.y;
         }
       }
 
@@ -97,7 +129,6 @@ int main(void) {
 
         bodies[i].position.x += bodies[i].velocity.x * dt;
         bodies[i].position.y += bodies[i].velocity.y * dt;
-
       }
     }
 
